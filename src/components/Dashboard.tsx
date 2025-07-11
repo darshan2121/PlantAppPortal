@@ -1,12 +1,13 @@
 import React from 'react';
-import { TreePine, Building2, Package, TrendingUp, MapPin, Users, Clock, CheckCircle } from 'lucide-react';
+import { TreePine, Building2, Package, TrendingUp, MapPin, Users, Clock, CheckCircle, Plus } from 'lucide-react';
 import { User } from '../App';
 
 interface DashboardProps {
   currentUser: User | null;
+  setActiveTab: (tab: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ currentUser, setActiveTab }) => {
   const stats = [
     {
       title: 'Total Plants',
@@ -61,7 +62,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentUser }) => {
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">Welcome back, {currentUser?.name}!</h1>
-        <p className="text-emerald-100">Here's what's happening with your plant distribution system today.</p>
+        <p className="text-emerald-100 mb-4">Here's what's happening with your plant distribution system today.</p>
+        
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => setActiveTab('inventory')}
+            className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Item</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('inventory')}
+            className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all"
+          >
+            <TreePine className="w-4 h-4" />
+            <span>Manage Inventory</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('orders')}
+            className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all"
+          >
+            <Package className="w-4 h-4" />
+            <span>View Orders</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

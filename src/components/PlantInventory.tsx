@@ -1,111 +1,200 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Edit, Trash2, TreePine, Package, AlertCircle } from 'lucide-react';
 
 export const PlantInventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [plants, setPlants] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryIcon, setCategoryIcon] = useState('');
+  const [categoryDescription, setCategoryDescription] = useState('');
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [categorySuccess, setCategorySuccess] = useState<string | null>(null);
 
-  const plants = [
-    {
-      id: 1,
-      name: 'Mango Tree',
-      scientificName: 'Mangifera indica',
-      category: 'Fruit Trees',
-      stock: 245,
-      price: 150,
-      status: 'In Stock',
-      image: 'https://images.pexels.com/photos/1458915/pexels-photo-1458915.jpeg?auto=compress&cs=tinysrgb&w=300',
-      description: 'High-quality mango saplings suitable for urban plantation'
-    },
-    {
-      id: 2,
-      name: 'Rose Plant',
-      scientificName: 'Rosa rubiginosa',
-      category: 'Flowering Plants',
-      stock: 89,
-      price: 45,
-      status: 'Low Stock',
-      image: 'https://images.pexels.com/photos/736230/pexels-photo-736230.jpeg?auto=compress&cs=tinysrgb&w=300',
-      description: 'Beautiful flowering rose plants for garden decoration'
-    },
-    {
-      id: 3,
-      name: 'Neem Tree',
-      scientificName: 'Azadirachta indica',
-      category: 'Medicinal Plants',
-      stock: 167,
-      price: 80,
-      status: 'In Stock',
-      image: 'https://images.pexels.com/photos/1458915/pexels-photo-1458915.jpeg?auto=compress&cs=tinysrgb&w=300',
-      description: 'Medicinal neem trees with natural pest control properties'
-    },
-    {
-      id: 4,
-      name: 'Tulsi Plant',
-      scientificName: 'Ocimum tenuiflorum',
-      category: 'Medicinal Plants',
-      stock: 234,
-      price: 25,
-      status: 'In Stock',
-      image: 'https://images.pexels.com/photos/1458915/pexels-photo-1458915.jpeg?auto=compress&cs=tinysrgb&w=300',
-      description: 'Sacred tulsi plants with medicinal properties'
-    },
-    {
-      id: 5,
-      name: 'Bougainvillea',
-      scientificName: 'Bougainvillea spectabilis',
-      category: 'Ornamental Plants',
-      stock: 12,
-      price: 120,
-      status: 'Critical',
-      image: 'https://images.pexels.com/photos/736230/pexels-photo-736230.jpeg?auto=compress&cs=tinysrgb&w=300',
-      description: 'Colorful ornamental flowering plants for landscaping'
-    },
-    {
-      id: 6,
-      name: 'Coconut Tree',
-      scientificName: 'Cocos nucifera',
-      category: 'Fruit Trees',
-      stock: 78,
-      price: 200,
-      status: 'In Stock',
-      image: 'https://images.pexels.com/photos/1458915/pexels-photo-1458915.jpeg?auto=compress&cs=tinysrgb&w=300',
-      description: 'Tall coconut trees suitable for coastal and urban areas'
-    }
-  ];
+  useEffect(() => {
+    const fetchPlants = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('http://192.168.0.38:5679/api/items');
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        setPlants(data.data || []);
+      } catch (err: any) {
+        setError(err.message || 'Error fetching data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlants();
+  }, []);
 
   const categories = ['all', 'Fruit Trees', 'Flowering Plants', 'Medicinal Plants', 'Ornamental Plants'];
 
   const filteredPlants = plants.filter(plant => {
     const matchesSearch = plant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plant.scientificName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || plant.category === selectedCategory;
+                         (plant.details?.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = selectedCategory === 'all' || plant.category?.name === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'In Stock': return 'bg-green-100 text-green-800';
-      case 'Low Stock': return 'bg-yellow-100 text-yellow-800';
-      case 'Critical': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const getStatusColor = (inventory: number) => {
+    if (inventory > 50) return 'bg-green-100 text-green-800';
+    if (inventory > 10) return 'bg-yellow-100 text-yellow-800';
+    if (inventory > 0) return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
   };
+
+  // Calculate live statistics from API data
+  const totalPlants = plants.length;
+  const inStock = plants.filter(p => p.inventory > 50).length;
+  const lowStock = plants.filter(p => p.inventory <= 50 && p.inventory > 10).length;
+  const criticalStock = plants.filter(p => p.inventory <= 10 && p.inventory > 0).length;
+  const outOfStock = plants.filter(p => p.inventory === 0).length;
+
+  // Get unique categories and their counts
+  const categoryStats = plants.reduce((acc, plant) => {
+    const categoryName = plant.category?.name || 'Uncategorized';
+    acc[categoryName] = (acc[categoryName] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Generate dynamic alerts based on actual data
+  const alerts = [
+    ...plants.filter(p => p.inventory === 0).map(p => ({
+      type: 'critical',
+      title: 'Out of Stock',
+      message: `${p.name} is out of stock`
+    })),
+    ...plants.filter(p => p.inventory <= 10 && p.inventory > 0).map(p => ({
+      type: 'warning',
+      title: 'Critical Stock',
+      message: `${p.name} has only ${p.inventory} units left`
+    }))
+  ].slice(0, 3); // Show max 3 alerts
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-gray-900">Plant Inventory</h2>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-emerald-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Plant</span>
-        </button>
+        <h2 className="text-3xl font-bold text-gray-900">Inventory</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowAddCategoryModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Category</span>
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-emerald-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Item</span>
+          </button>
+        </div>
       </div>
 
+      {/* Add Category Modal */}
+      {showAddCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md relative">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              onClick={() => {
+                setShowAddCategoryModal(false);
+                setCategoryName('');
+                setCategoryIcon('');
+                setCategoryDescription('');
+                setCategoryError(null);
+                setCategorySuccess(null);
+              }}
+            >
+              ×
+            </button>
+            <h3 className="text-xl font-bold mb-4">Add Category</h3>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setCategoryLoading(true);
+                setCategoryError(null);
+                setCategorySuccess(null);
+                try {
+                  const response = await fetch('http://192.168.0.38:5679/api/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name: categoryName,
+                      icon: categoryIcon,
+                      discription: categoryDescription,
+                    }),
+                  });
+                  const data = await response.json();
+                  if (!response.ok) throw new Error(data.message || 'Failed to create category');
+                  setCategorySuccess('Category created successfully!');
+                  setCategoryName('');
+                  setCategoryIcon('');
+                  setCategoryDescription('');
+                } catch (err: any) {
+                  setCategoryError(err.message || 'Error creating category');
+                } finally {
+                  setCategoryLoading(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={categoryName}
+                  onChange={e => setCategoryName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Icon (optional)</label>
+                <input
+                  type="text"
+                  value={categoryIcon}
+                  onChange={e => setCategoryIcon(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={categoryDescription}
+                  onChange={e => setCategoryDescription(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              {categoryError && <div className="text-red-600 text-sm">{categoryError}</div>}
+              {categorySuccess && <div className="text-green-600 text-sm">{categorySuccess}</div>}
+              <button
+                type="submit"
+                disabled={categoryLoading}
+                className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {categoryLoading ? 'Creating...' : 'Add Category'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center items-center py-10 text-gray-500">Loading...</div>
+      ) : error ? (
+        <div className="flex justify-center items-center py-10 text-red-500">{error}</div>
+      ) : (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -124,10 +213,10 @@ export const PlantInventory: React.FC = () => {
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             >
-              {categories.map(category => (
-                <option key={category} value={category}>
-                  {category === 'all' ? 'All Categories' : category}
-                </option>
+              <option value="all">All Categories</option>
+              {/* Dynamically render categories from API data */}
+              {[...new Set(plants.map(p => p.category?.name).filter(Boolean))].map(category => (
+                <option key={category} value={category}>{category}</option>
               ))}
             </select>
           </div>
@@ -140,44 +229,40 @@ export const PlantInventory: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plant</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredPlants.map((plant) => (
-                <tr key={plant.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={plant._id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <img
-                        src={plant.image}
+                        src={plant.imageUrlFull || 'https://via.placeholder.com/48x48?text=No+Image'}
                         alt={plant.name}
                         className="w-12 h-12 rounded-lg object-cover"
                       />
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{plant.name}</div>
-                        <div className="text-sm text-gray-500">{plant.scientificName}</div>
+                        <div className="text-sm text-gray-500">{plant.details}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 py-1 text-xs font-medium bg-emerald-100 text-emerald-800 rounded-full">
-                      {plant.category}
+                      {plant.category?.name || 'N/A'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex items-center">
                       <Package className="w-4 h-4 text-gray-400 mr-1" />
-                      {plant.stock}
+                      {plant.inventory}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ₹{plant.price}
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(plant.status)}`}>
-                      {plant.status}
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(plant.inventory)}`}>
+                      {plant.inventory > 50 ? 'In Stock' : plant.inventory > 10 ? 'Low Stock' : plant.inventory > 0 ? 'Critical' : 'Out of Stock'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -196,6 +281,7 @@ export const PlantInventory: React.FC = () => {
           </table>
         </div>
       </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -205,20 +291,24 @@ export const PlantInventory: React.FC = () => {
           </div>
           <div className="space-y-2">
             <div className="flex justify-between">
-              <span className="text-gray-600">Total Plants</span>
-              <span className="font-semibold">825</span>
+              <span className="text-gray-600">Total Items</span>
+              <span className="font-semibold">{totalPlants}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">In Stock</span>
-              <span className="font-semibold text-green-600">724</span>
+              <span className="font-semibold text-green-600">{inStock}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Low Stock</span>
-              <span className="font-semibold text-yellow-600">89</span>
+              <span className="font-semibold text-yellow-600">{lowStock}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Critical</span>
-              <span className="font-semibold text-red-600">12</span>
+              <span className="font-semibold text-red-600">{criticalStock}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Out of Stock</span>
+              <span className="font-semibold text-gray-600">{outOfStock}</span>
             </div>
           </div>
         </div>
@@ -229,22 +319,12 @@ export const PlantInventory: React.FC = () => {
             <Package className="w-6 h-6 text-blue-600" />
           </div>
           <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Fruit Trees</span>
-              <span className="font-semibold">323</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Flowering Plants</span>
-              <span className="font-semibold">245</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Medicinal Plants</span>
-              <span className="font-semibold">167</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Ornamental Plants</span>
-              <span className="font-semibold">90</span>
-            </div>
+            {Object.entries(categoryStats).map(([category, count]) => (
+              <div key={category} className="flex justify-between">
+                <span className="text-gray-600">{category}</span>
+                <span className="font-semibold">{count as number}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -254,14 +334,25 @@ export const PlantInventory: React.FC = () => {
             <AlertCircle className="w-6 h-6 text-red-600" />
           </div>
           <div className="space-y-3">
-            <div className="p-3 bg-red-50 rounded-lg">
-              <p className="text-sm font-medium text-red-800">Critical Stock Alert</p>
-              <p className="text-xs text-red-600">Bougainvillea stock is critically low</p>
-            </div>
-            <div className="p-3 bg-yellow-50 rounded-lg">
-              <p className="text-sm font-medium text-yellow-800">Low Stock Warning</p>
-              <p className="text-xs text-yellow-600">Rose plants need restocking</p>
-            </div>
+            {alerts.length > 0 ? (
+              alerts.map((alert, index) => (
+                <div key={index} className={`p-3 rounded-lg ${
+                  alert.type === 'critical' ? 'bg-red-50' : 'bg-yellow-50'
+                }`}>
+                  <p className={`text-sm font-medium ${
+                    alert.type === 'critical' ? 'text-red-800' : 'text-yellow-800'
+                  }`}>{alert.title}</p>
+                  <p className={`text-xs ${
+                    alert.type === 'critical' ? 'text-red-600' : 'text-yellow-600'
+                  }`}>{alert.message}</p>
+                </div>
+              ))
+            ) : (
+              <div className="p-3 bg-green-50 rounded-lg">
+                <p className="text-sm font-medium text-green-800">All Good!</p>
+                <p className="text-xs text-green-600">No critical alerts at the moment</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

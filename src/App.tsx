@@ -57,7 +57,7 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard currentUser={currentUser} />;
+        return <Dashboard currentUser={currentUser} setActiveTab={setActiveTab} />;
       case 'inventory':
         return <PlantInventory />;
       case 'societies':
@@ -75,7 +75,7 @@ function App() {
       case 'profile':
         return <Profile currentUser={currentUser} onUpdateUser={setCurrentUser} />;
       default:
-        return <Dashboard currentUser={currentUser} />;
+        return <Dashboard currentUser={currentUser} setActiveTab={setActiveTab} />;
     }
   };
 

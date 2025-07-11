@@ -22,12 +22,10 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, currentUser }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Administrator', 'Supervisor', 'Manager'] },
-    { id: 'inventory', label: 'Plant Inventory', icon: TreePine, roles: ['Administrator', 'Supervisor', 'Manager'] },
-    { id: 'societies', label: 'Societies', icon: Building2, roles: ['Administrator', 'Supervisor', 'Manager'] },
-    { id: 'routing', label: 'Distribution Routing', icon: MapPin, roles: ['Administrator', 'Supervisor'] },
-    { id: 'orders', label: 'Order Tracking', icon: Package, roles: ['Administrator', 'Supervisor', 'Manager'] },
-    { id: 'users', label: 'User Management', icon: Users, roles: ['Administrator'] },
-    { id: 'reports', label: 'Reports', icon: FileText, roles: ['Administrator', 'Supervisor', 'Manager'] },
+    { id: 'inventory', label: 'Inventory', icon: TreePine, roles: ['Administrator', 'Supervisor', 'Manager'] },
+    { id: 'orders', label: 'Orders', icon: Package, roles: ['Administrator', 'Supervisor', 'Manager'] },
+    { id: 'reports', label: 'Reports', icon: FileText, roles: ['Administrator', 'Supervisor'] },
+    { id: 'users', label: 'Users', icon: Users, roles: ['Administrator'] },
     { id: 'settings', label: 'Settings', icon: Settings, roles: ['Administrator'] },
   ];
 
